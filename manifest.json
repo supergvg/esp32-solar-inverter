@@ -1,0 +1,17 @@
+{
+  "name": "Solar Inverter Control",
+  "version": "",
+  "home_assistant_domain": "esphome",
+  "new_install_skip_erase": false,
+  "builds": [
+    {
+      "chipFamily": "ESP32",
+      "parts": [
+        {
+          "path": "project-template-esp32/project-template-esp32.bin",
+          "offset": 0
+        }
+      ]
+    }
+  ]
+}
