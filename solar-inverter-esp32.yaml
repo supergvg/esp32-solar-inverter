@@ -12,7 +12,7 @@ esphome:
   # configuration and updates.
   project:
     name: esphome.project-template
-    version: "1.0"
+    version: "1.0.1"
 
   on_boot:
     then:
@@ -48,7 +48,7 @@ ota:
 
 # This should point to the public location of this yaml file.
 dashboard_import:
-  package_import_url: github://supergvg/esp32-solar-inverter/blob/main/solar-inverter-esp32.yaml@main
+  package_import_url: github://supergvg/esp32-solar-inverter/solar-inverter-esp32.yaml@main
 
 wifi:
   # Set up a wifi access point using the device name above
