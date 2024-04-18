@@ -1,0 +1,531 @@
+# These substitutions allow the end user to override certain values
+substitutions:
+  name: "project-template"
+
+esphome:
+  name: "${name}"
+  # Automatically add the mac address to the name
+  # so you can use a single firmware for all devices
+  name_add_mac_suffix: true
+
+  # This will allow for (future) project identification,
+  # configuration and updates.
+  project:
+    name: esphome.project-template
+    version: "1.0"
+
+  on_boot:
+    then:
+      - lambda: |-
+          int idx = 0;
+          id(global_id_cmd_map)[idx++] = id(global_id_cmd_get_protocol_version);
+          id(global_id_cmd_map)[idx++] = id(global_id_cmd_get_id);
+          id(global_id_cmd_map)[idx++] = id(global_id_cmd_get_fw_pri);
+          id(global_id_cmd_map)[idx++] = id(global_id_cmd_get_fw_sec);
+          id(global_id_cmd_map)[idx++] = id(global_id_cmd_get_fw_third);
+          id(global_id_cmd_map)[idx++] = id(global_id_cmd_get_general_status_parameters);
+          id(global_id_cmd_map)[idx++] = id(global_id_cmd_get_device_mode);
+          id(global_id_cmd_map)[idx++] = id(global_id_cmd_get_device_rating_information);
+          id(global_id_cmd_map)[idx++] = id(global_id_cmd_device_warning_status);
+      - logger.log:
+          format: ".................START %d %d"
+          args: [ 'id(global_id_cmd_idx)', 'id(global_id_cmd_map).size()' ]
+
+esp32:
+  board: esp32dev
+  framework:
+    type: arduino
+
+# To be able to get logs from the device via serial and api.
+logger:
+  level: DEBUG
+
+# API is a requirement of the dashboard import.
+api:
+
+# OTA is required for Over-the-Air updating
+ota:
+
+# This should point to the public location of this yaml file.
+dashboard_import:
+  package_import_url: github://supergvg/esp32-solar-invertor/blob/main/solar-inverter-esp32.yaml@main
+
+wifi:
+  # Set up a wifi access point using the device name above
+  ap:
+    password: "12345678"
+
+# In combination with the `ap` this allows the user
+# to provision wifi credentials to the device.
+captive_portal:
+
+##########################################################
+# Most projects should not remove anything from above here
+# and should just modify the name, project name/version
+# and git url for the dashboard_import
+##########################################################
+
+
+# Sets up Bluetooth LE (Only on ESP32) to allow the user
+# to provision wifi credentials to the device.
+esp32_improv:
+  authorizer: none
+
+# Sets up the improv via serial client for Wi-Fi provisioning.
+# Handy if your device has a usb port for the user to add credentials when they first get it.
+improv_serial:
+
+################################################################################
+# GLOBAL VARIABLES
+################################################################################
+
+globals:
+  # current cmd index
+  - id: global_id_cmd_idx
+    type: int
+    initial_value: '0'
+  # command map
+  - id: global_id_cmd_map
+    type: std::map<int, std::vector<uint8_t>>
+  # last command
+  - id: global_id_last_command
+    type: std::vector<uint8_t>
+
+  # get device protocol QPI
+  - id: global_id_cmd_get_protocol_version
+    type: std::vector<uint8_t>
+    initial_value: '{0x51, 0x50, 0x49, 0xBE, 0xAC, 0x0D}'
+  # get invertor serial QID
+  - id: global_id_cmd_get_id
+    type: std::vector<uint8_t>
+    initial_value: '{0x51, 0x49, 0x44, 0xD6, 0xEA, 0x0D}'
+  # get firmware first part QVFW
+  - id: global_id_cmd_get_fw_pri
+    type: std::vector<uint8_t>
+    initial_value: '{0x51, 0x56, 0x46, 0x57, 0x62, 0x99, 0x0D}'
+  # get firmware second part QVFW2
+  - id: global_id_cmd_get_fw_sec
+    type: std::vector<uint8_t>
+    initial_value: '{0x51, 0x56, 0x46, 0x57, 0x32, 0xC3, 0xF5, 0x0D}'
+  # get firmware third part QVFW3
+  - id: global_id_cmd_get_fw_third
+    type: std::vector<uint8_t>
+    initial_value: '{0x51, 0x56, 0x46, 0x57, 0x33, 0xD3, 0xD4, 0x0D}'
+  # get device general status parameters QPIGS
+  - id: global_id_cmd_get_general_status_parameters
+    type: std::vector<uint8_t>
+    initial_value: '{0x51, 0x50, 0x49, 0x47, 0x53, 0xB7, 0xA9, 0x0D}'
+    # get device mode QMOD
+  - id: global_id_cmd_get_device_mode
+    type: std::vector<uint8_t>
+    initial_value: '{0x51, 0x4D, 0x4F, 0x44, 0x49, 0xC1, 0x0D}'
+    # get device rating information QPIRI
+  - id: global_id_cmd_get_device_rating_information
+    type: std::vector<uint8_t>
+    initial_value: '{0x51, 0x50, 0x49, 0x52, 0x49, 0xF8, 0x54, 0x0D}'
+    # get device warning status QPIWS
+  - id: global_id_cmd_device_warning_status
+    type: std::vector<uint8_t>
+    initial_value: '{0x51, 0x50, 0x49, 0x57, 0x53, 0xB4, 0xDA, 0x0D}'
+
+
+  - id: global_id_cmd_set_output_priority_00
+    type: std::vector<uint8_t>
+    initial_value: '{0x50, 0x4f, 0x50, 0x30, 0x30, 0x00, 0xEF, 0x0D}'
+  - id: global_id_cmd_set_output_priority_01
+    type: std::vector<uint8_t>
+    initial_value: '{0x50, 0x4f, 0x50, 0x30, 0x31, 0x00, 0xEF, 0x0D}'
+  - id: global_id_cmd_set_output_priority_02
+    type: std::vector<uint8_t>
+    initial_value: '{0x50, 0x4f, 0x50, 0x30, 0x32, 0x00, 0xEF, 0x0D}'
+
+################################################################################
+# SETUP HARDWARE
+################################################################################
+
+# Time setup (use homeassistant or sntp)
+time:
+  - platform: sntp
+    id: homeassistant_time
+    timezone: Europe/Ukraine
+
+uart:
+  - id: uart_bus1
+    baud_rate: 2400
+    data_bits: 8
+    stop_bits: 1
+    parity: NONE
+    tx_pin: GPIO16
+    rx_pin: GPIO17
+    debug:
+      direction: BOTH
+      dummy_receiver: true
+      after:
+        delimiter: "\r"
+      sequence:
+        - lambda: |-
+            UARTDebug::log_string(direction, bytes);
+            std::string response(bytes.begin(), bytes.end());
+            std::vector<uint8_t> last_cmd = id(global_id_last_command);
+            
+            if (direction == UART_DIRECTION_RX) {
+              if ( last_cmd == id(global_id_cmd_get_id) ) {
+                id(invertor_id).publish_state(response.substr(1, 14).c_str());
+              } else if ( last_cmd == id(global_id_cmd_get_fw_pri) ) {
+                id(invertor_fw_pri).publish_state(response.substr(7, 8).c_str());
+              } else if ( last_cmd == id(global_id_cmd_get_fw_sec) ) {
+                if (response.length() > 15) {
+                  id(invertor_fw_sec).publish_state(response.substr(8, 8).c_str());
+                } else {
+                  id(invertor_fw_sec).publish_state("N/A");
+                }
+              } else if ( last_cmd == id(global_id_cmd_get_fw_third) ) {
+                if (response.length() > 15) {
+                  id(invertor_fw_third).publish_state(response.substr(8, 7).c_str());
+                } else {
+                  id(invertor_fw_third).publish_state("N/A");
+                }
+              } else if ( last_cmd == id(global_id_cmd_get_protocol_version) ) {
+                id(invertor_protocol).publish_state(response.substr(3, 2).c_str());
+              } else if ( last_cmd == id(global_id_cmd_get_general_status_parameters) ) {
+                id(invertor_general_status_parameters).publish_state(response);
+              } else if ( last_cmd == id(global_id_cmd_get_device_mode) ) {
+                id(invertor_device_mode).publish_state(response.substr(1, 1).c_str());
+              } else if ( last_cmd == id(global_id_cmd_get_device_rating_information) ) {
+                id(invertor_rating_information).publish_state(response);
+              } else if ( last_cmd == id(global_id_cmd_device_warning_status) ) {
+                id (invertor_device_warning_status).publish_state(response);
+              }
+
+              else {
+                ESP_LOGD("main", "_____ UNKNOWN COMMAND");
+                //return;
+              }
+
+              id(global_id_last_command).clear();
+            } else if (direction == UART_DIRECTION_TX) {
+              ESP_LOGD("main", "_____ TX %s", response.c_str());
+              id(global_id_last_command) = bytes;
+            } else if (direction == UART_DIRECTION_BOTH) {
+              ESP_LOGD("main", "_____ BOTH %s", response.c_str());
+            } else {
+              ESP_LOGD("main", "_____ UNKNOWN DIRECTION");
+            }
+
+################################################################################
+# SETUP SENSORS
+################################################################################
+
+sensor:
+  - platform: template
+    id: invertor_grid_voltage
+    name: "Grid Voltage"
+    accuracy_decimals: 1
+    unit_of_measurement: "V"
+    device_class: voltage
+
+  - platform: template
+    id: invertor_grid_frequency
+    name: "Grid Frequency"
+    accuracy_decimals: 1
+    unit_of_measurement: "Hz"
+    device_class: Frequency
+
+  - platform: template
+    id: invertor_ac_output_voltage
+    name: "AC Output Voltage"
+    accuracy_decimals: 1
+    unit_of_measurement: "V"
+    device_class: voltage
+
+  - platform: template
+    id: invertor_ac_output_frequency
+    name: "AC Output Frequency"
+    accuracy_decimals: 1
+    unit_of_measurement: "Hz"
+    device_class: Frequency
+
+  - platform: template
+    id: invertor_ac_output_power_apparent
+    name: "AC Output Power Apparent"
+    accuracy_decimals: 0
+    unit_of_measurement: "VA"
+    device_class: apparent_power
+
+  - platform: template
+    id: invertor_ac_output_power_active
+    name: "AC Output Power Active"
+    accuracy_decimals: 0
+    unit_of_measurement: "W"
+    device_class: Power
+
+  - platform: template
+    id: invertor_output_load_percent
+    name: "Output load percent"
+    accuracy_decimals: 0
+    unit_of_measurement: "%"
+    device_class: Power
+
+  - platform: template
+    id: invertor_output_bus_voltage
+    name: "BUS voltage"
+    accuracy_decimals: 0
+    unit_of_measurement: "V"
+    device_class: voltage
+
+  - platform: template
+    id: invertor_battery_voltage
+    name: "Battery voltage"
+    accuracy_decimals: 1
+    unit_of_measurement: "V"
+    device_class: voltage
+
+  - platform: template
+    id: invertor_battery_charging_current
+    name: "Battery charging current"
+    accuracy_decimals: 1
+    unit_of_measurement: "A"
+    device_class: current
+
+  - platform: template
+    id: invertor_battery_capacity
+    name: "Battery capacity"
+    accuracy_decimals: 0
+    unit_of_measurement: "%"
+    device_class: battery
+
+  - platform: template
+    id: invertor_heatsink_temperature
+    name: "Inverter heatsink temperature"
+    accuracy_decimals: 0
+    unit_of_measurement: "°C"
+    device_class: temperature
+
+  - platform: template
+    id: invertor_pv_battery_input_current
+    name: "PV Battery Input Current"
+    accuracy_decimals: 1
+    unit_of_measurement: "A"
+    device_class: current
+
+  - platform: template
+    id: invertor_pv_input_voltage
+    name: "PV Input voltage"
+    accuracy_decimals: 1
+    unit_of_measurement: "V"
+    device_class: voltage
+
+  - platform: template
+    id: invertor_scc_battery_voltage
+    name: "Battery voltage from SCC"
+    accuracy_decimals: 2
+    unit_of_measurement: "V"
+    device_class: voltage
+
+  - platform: template
+    id: invertor_battery_discharge_current
+    name: "Battery discharge current"
+    accuracy_decimals: 1
+    unit_of_measurement: "A"
+    device_class: current
+
+  - platform: template
+    id: invertor_pv_input_power
+    name: "PV Input power"
+    accuracy_decimals: 0
+    unit_of_measurement: "W"
+    device_class: power
+
+  - platform: integration
+    name: "Total PV Input power"
+    id: invertor_total_pv_input_power
+    sensor: invertor_pv_input_power
+    time_unit: h
+    device_class: energy
+    state_class: total_increasing
+    unit_of_measurement: kWh
+    accuracy_decimals: 2
+    restore: true #If true, save the reading to the flash memory to prevent data loss in case of power loss
+    filters:
+      - multiply: 0.001
+
+  #
+
+  - platform: template
+    id: invertor_grid_rating_voltage
+    name: "Grid rating voltage"
+    accuracy_decimals: 1
+    unit_of_measurement: "V"
+    device_class: voltage
+
+text_sensor:
+  - platform: template
+    id: invertor_id
+    name: "Serial"
+    icon: "mdi:numeric"
+
+  - platform: template
+    id: invertor_protocol
+    internal: True
+
+  - platform: template
+    id: invertor_fw_pri
+    internal: True
+
+  - platform: template
+    id: invertor_fw_sec
+    internal: True
+
+  - platform: template
+    id: invertor_fw_third
+    internal: True
+
+  - platform: template
+    id: invertor_general_status_parameters
+    internal: True
+    on_raw_value:
+      then:
+        lambda: |-
+          if (x.size() > 0) {
+            id(invertor_grid_voltage).publish_state( atof(x.substr(1,5).c_str()) );
+            id(invertor_grid_frequency).publish_state( atof(x.substr(7,4).c_str()) );
+            id(invertor_ac_output_voltage).publish_state( atof(x.substr(12,5).c_str()) );
+            id(invertor_ac_output_frequency).publish_state( atof(x.substr(18,4).c_str()) );
+            id(invertor_ac_output_power_apparent).publish_state( atoi(x.substr(23,4).c_str()) );
+            id(invertor_ac_output_power_active).publish_state( atoi(x.substr(28,4).c_str()) );
+            id(invertor_output_load_percent).publish_state( atoi(x.substr(33,3).c_str()) );
+            id(invertor_output_bus_voltage).publish_state( atoi(x.substr(37,3).c_str()) );
+            id(invertor_battery_voltage).publish_state( atof(x.substr(41,5).c_str()) );
+            id(invertor_battery_charging_current).publish_state( atof(x.substr(47,5).c_str()) );
+            id(invertor_battery_capacity).publish_state( atoi(x.substr(51,3).c_str()) );
+            id(invertor_heatsink_temperature).publish_state( atoi(x.substr(55,4).c_str()) );
+            id(invertor_pv_battery_input_current).publish_state( atof(x.substr(60,4).c_str()) );
+            id(invertor_pv_input_voltage).publish_state( atof(x.substr(65,5).c_str()) );
+            id(invertor_scc_battery_voltage).publish_state( atof(x.substr(71,5).c_str()) );
+            id(invertor_battery_discharge_current).publish_state( atof(x.substr(77,5).c_str()) );
+            id(invertor_pv_input_power).publish_state( atoi(x.substr(98,5).c_str()) );
+          }
+
+  - platform: template
+    id: invertor_rating_information
+    internal: True
+    on_raw_value:
+      then:
+        lambda: |-
+          if (x.size() > 0) {
+            id(invertor_grid_rating_voltage).publish_state( atof(x.substr(1,5).c_str()) );
+          
+            std::string osp = x.substr(75,1).c_str();
+            id(invertor_output_source_priority).publish_state( osp );
+            if (osp == "0") {
+              id(select_output_source_priority).publish_state("USB");
+            } else if (osp == "1") {
+              id(select_output_source_priority).publish_state("SUB");
+            } else if (osp == "2") {
+              id(select_output_source_priority).publish_state("SBU");
+            }
+          
+            id(invertor_charger_source_priority).publish_state( x.substr(77,1).c_str() );
+          }
+
+  - platform: template
+    id: invertor_device_warning_status
+    internal: True
+    on_raw_value:
+      then:
+        lambda: |-
+          if (x.size() > 32) {
+            id(invertor_warning_line_fault).publish_state( atoi(x.substr(6,1).c_str()) == 1 );
+          }
+
+  - platform: template
+    id: invertor_fw
+    name: "FW"
+    icon: "mdi:micro-sd"
+    update_interval: 30s
+    lambda: |-
+      return id(invertor_fw_pri).state + "." + id(invertor_fw_sec).state + "." + id(invertor_fw_third).state + "#" + id(invertor_protocol).state;
+
+  - platform: template
+    id: invertor_device_mode
+    name: "Device Mode"
+    icon: "mdi:auto-mode"
+
+  - platform: template
+    id: invertor_output_source_priority
+    name: "Output source priority"
+    icon: mdi:priority-high
+    filters:
+      - map:
+          - 0 -> USB
+          - 1 -> SUB
+          - 2 -> SBU
+
+  - platform: template
+    id: invertor_charger_source_priority
+    name: "Charger source priority"
+    icon: mdi:ev-station
+    filters:
+      - map:
+          - 0 -> UtilityFirst
+          - 1 -> SolarFirst
+          - 2 -> Solar+Utility
+          - 3 -> OnlySolar
+
+binary_sensor:
+  - platform: template
+    id: invertor_warning_line_fault
+    name: "Line Fault"
+    icon: mdi:alert
+
+interval:
+  - interval: 1s
+    then:
+      - if:
+          condition:
+            lambda: |-
+              return id(global_id_last_command).empty();
+          then:
+            # - logger.log:
+            #     format: ".................%d"
+            #     args: [ 'id(global_id_cmd_idx)' ]
+            - uart.write: !lambda
+                return id(global_id_cmd_map)[id(global_id_cmd_idx)];
+            - lambda: |-
+                if (id(global_id_cmd_idx) < id(global_id_cmd_map).size() - 1) {
+                  id(global_id_cmd_idx)++;
+                } else {
+                  id(global_id_cmd_idx) = 0;
+                }
+
+################################################################################
+# SETUP UI
+################################################################################
+
+select:
+  - platform: template
+    name: Output source priority
+    id: select_output_source_priority
+    options:
+      - "USB"
+      - "SUB"
+      - "SBU"
+    initial_option: "USB"
+    optimistic: true
+    set_action:
+      # - lambda: |-
+      #     std::vector<uint8_t> vec;
+      #     if (x == "USB") {
+      #       vec = id(global_id_cmd_set_output_priority_00);
+      #     } else if (x == "SUB") {
+      #       vec = id(global_id_cmd_set_output_priority_01);
+      #     } else if (x == "SUB") {
+      #       vec = id(global_id_cmd_set_output_priority_02);
+      #     }
+
+      #     std::string str(vec.begin(), vec.end());
+      #     id(uart_bus1).write_str(str.c_str());
+      - logger.log:
+          format: "------------------------------------------------------------------------------------------------Chosen option: %s"
+          args: ["x.c_str()"]
+
