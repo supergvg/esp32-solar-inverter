@@ -48,7 +48,7 @@ ota:
 
 # This should point to the public location of this yaml file.
 dashboard_import:
-  package_import_url: github://supergvg/esp32-solar-invertor/blob/main/solar-inverter-esp32.yaml@main
+  package_import_url: github://supergvg/esp32-solar-inverter/blob/main/solar-inverter-esp32.yaml@main
 
 wifi:
   # Set up a wifi access point using the device name above
@@ -95,7 +95,7 @@ globals:
   - id: global_id_cmd_get_protocol_version
     type: std::vector<uint8_t>
     initial_value: '{0x51, 0x50, 0x49, 0xBE, 0xAC, 0x0D}'
-  # get invertor serial QID
+  # get inverter serial QID
   - id: global_id_cmd_get_id
     type: std::vector<uint8_t>
     initial_value: '{0x51, 0x49, 0x44, 0xD6, 0xEA, 0x0D}'
