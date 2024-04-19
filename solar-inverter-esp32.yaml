@@ -27,9 +27,6 @@ esphome:
           id(global_id_cmd_map)[idx++] = id(global_id_cmd_get_device_mode);
           id(global_id_cmd_map)[idx++] = id(global_id_cmd_get_device_rating_information);
           id(global_id_cmd_map)[idx++] = id(global_id_cmd_device_warning_status);
-      - logger.log:
-          format: ".................START %d %d"
-          args: [ 'id(global_id_cmd_idx)', 'id(global_id_cmd_map).size()' ]
 
 esp32:
   board: esp32dev
@@ -95,7 +92,7 @@ globals:
   - id: global_id_cmd_get_protocol_version
     type: std::vector<uint8_t>
     initial_value: '{0x51, 0x50, 0x49, 0xBE, 0xAC, 0x0D}'
-  # get inverter serial QID
+  # get invertor serial QID
   - id: global_id_cmd_get_id
     type: std::vector<uint8_t>
     initial_value: '{0x51, 0x49, 0x44, 0xD6, 0xEA, 0x0D}'
@@ -128,16 +125,30 @@ globals:
     type: std::vector<uint8_t>
     initial_value: '{0x51, 0x50, 0x49, 0x57, 0x53, 0xB4, 0xDA, 0x0D}'
 
-
-  - id: global_id_cmd_set_output_priority_00
+    # set output priority POPXX
+  - id: global_id_cmd_set_output_priority_00 #
     type: std::vector<uint8_t>
     initial_value: '{0x50, 0x4f, 0x50, 0x30, 0x30, 0x00, 0xEF, 0x0D}'
-  - id: global_id_cmd_set_output_priority_01
+  - id: global_id_cmd_set_output_priority_01 #
     type: std::vector<uint8_t>
     initial_value: '{0x50, 0x4f, 0x50, 0x30, 0x31, 0x00, 0xEF, 0x0D}'
-  - id: global_id_cmd_set_output_priority_02
+  - id: global_id_cmd_set_output_priority_02 #
     type: std::vector<uint8_t>
     initial_value: '{0x50, 0x4f, 0x50, 0x30, 0x32, 0x00, 0xEF, 0x0D}'
+
+    # set device charger priority PCPXX
+  - id: global_id_cmd_set_charger_priority_00 # utility first
+    type: std::vector<uint8_t>
+    initial_value: '{0x50, 0x43, 0x50, 0x30, 0x30, 0x0C, 0x83, 0x0D}'
+  - id: global_id_cmd_set_charger_priority_01 # solar first
+    type: std::vector<uint8_t>
+    initial_value: '{0x50, 0x43, 0x50, 0x30, 0x31, 0x58, 0x53, 0x0D}'
+  - id: global_id_cmd_set_charger_priority_02 # solar and utility
+    type: std::vector<uint8_t>
+    initial_value: '{0x50, 0x43, 0x50, 0x30, 0x32, 0x58, 0x54, 0x0D}'
+  - id: global_id_cmd_set_charger_priority_03 # only solar
+    type: std::vector<uint8_t>
+    initial_value: '{0x50, 0x43, 0x50, 0x30, 0x33, 0x58, 0x55, 0x0D}'
 
 ################################################################################
 # SETUP HARDWARE
@@ -336,6 +347,7 @@ sensor:
     unit_of_measurement: "W"
     device_class: power
 
+    # energy counter
   - platform: integration
     name: "Total PV Input power"
     id: invertor_total_pv_input_power
@@ -345,11 +357,9 @@ sensor:
     state_class: total_increasing
     unit_of_measurement: kWh
     accuracy_decimals: 2
-    restore: true #If true, save the reading to the flash memory to prevent data loss in case of power loss
+    restore: True
     filters:
       - multiply: 0.001
-
-  #
 
   - platform: template
     id: invertor_grid_rating_voltage
@@ -424,8 +434,18 @@ text_sensor:
             } else if (osp == "2") {
               id(select_output_source_priority).publish_state("SBU");
             }
-          
-            id(invertor_charger_source_priority).publish_state( x.substr(77,1).c_str() );
+
+            std::string bcp = x.substr(77,1).c_str();
+            id(invertor_charger_source_priority).publish_state( bcp );
+            if (bcp == "0") {
+              id(select_device_charger_priority).publish_state( "UtilityFirst" );
+            } else if (bcp == "1") {
+              id(select_device_charger_priority).publish_state( "SolarFirst" );
+            } else if (bcp == "2") {
+              id(select_device_charger_priority).publish_state( "Solar+Utility" );
+            } else if (bcp == "3") {
+              id(select_device_charger_priority).publish_state( "OnlySolar" );
+            }
           }
 
   - platform: template
@@ -513,19 +533,56 @@ select:
     initial_option: "USB"
     optimistic: true
     set_action:
-      # - lambda: |-
-      #     std::vector<uint8_t> vec;
-      #     if (x == "USB") {
-      #       vec = id(global_id_cmd_set_output_priority_00);
-      #     } else if (x == "SUB") {
-      #       vec = id(global_id_cmd_set_output_priority_01);
-      #     } else if (x == "SUB") {
-      #       vec = id(global_id_cmd_set_output_priority_02);
-      #     }
-
-      #     std::string str(vec.begin(), vec.end());
-      #     id(uart_bus1).write_str(str.c_str());
+      - if:
+          condition:
+            lambda: 'return x == "USB";'
+          then:
+            - uart.write: !lambda return id(global_id_cmd_set_output_priority_00);
+      - if:
+          condition:
+            lambda: 'return x == "SUB";'
+          then:
+            - uart.write: !lambda return id(global_id_cmd_set_output_priority_01);
+      - if:
+          condition:
+            lambda: 'return x == "SBU";'
+          then:
+            - uart.write: !lambda return id(global_id_cmd_set_output_priority_02);
       - logger.log:
-          format: "------------------------------------------------------------------------------------------------Chosen option: %s"
+          format: ".................... selected source priority: %s"
           args: ["x.c_str()"]
 
+  - platform: template
+    name: Device charger priority
+    id: select_device_charger_priority
+    options:
+      - "UtilityFirst"
+      - "SolarFirst"
+      - "Solar+Utility"
+      - "OnlySolar"
+    initial_option: "SolarFirst"
+    optimistic: true
+    set_action:
+      - if:
+          condition:
+            lambda: 'return x == "UtilityFirst";'
+          then:
+            - uart.write: !lambda return id(global_id_cmd_set_charger_priority_00);
+      - if:
+          condition:
+            lambda: 'return x == "SolarFirst";'
+          then:
+            - uart.write: !lambda return id(global_id_cmd_set_charger_priority_01);
+      - if:
+          condition:
+            lambda: 'return x == "Solar+Utility";'
+          then:
+            - uart.write: !lambda return id(global_id_cmd_set_charger_priority_02);
+      - if:
+          condition:
+            lambda: 'return x == "OnlySolar";'
+          then:
+            - uart.write: !lambda return id(global_id_cmd_set_charger_priority_03);
+      - logger.log:
+          format: ".................... selected charge priority: %s"
+          args: ["x.c_str()"]
