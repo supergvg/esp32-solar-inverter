@@ -12,7 +12,7 @@ esphome:
   # configuration and updates.
   project:
     name: esphome.project-template
-    version: "1.0.1"
+    version: "1.0.3"
 
   on_boot:
     then:
@@ -456,6 +456,8 @@ text_sensor:
         lambda: |-
           if (x.size() > 32) {
             id(invertor_warning_line_fault).publish_state( atoi(x.substr(6,1).c_str()) == 1 );
+            id(invertor_warning_battery_low).publish_state( atoi(x.substr(13,1).c_str()) == 1 );
+            id(invertor_warning_over_load).publish_state( atoi(x.substr(17,1).c_str()) == 1 );
           }
 
   - platform: template
@@ -470,6 +472,14 @@ text_sensor:
     id: invertor_device_mode
     name: "Device Mode"
     icon: "mdi:auto-mode"
+    filters:
+      - map:
+          - P -> Power on mode
+          - S -> Standby mode
+          - L -> Line Mode
+          - B -> Battery mode
+          - F -> Fault mode
+          - H -> Power saving mode
 
   - platform: template
     id: invertor_output_source_priority
@@ -496,6 +506,16 @@ binary_sensor:
   - platform: template
     id: invertor_warning_line_fault
     name: "Line Fault"
+    icon: mdi:alert
+
+  - platform: template
+    id: invertor_warning_battery_low
+    name: "Battery low"
+    icon: mdi:alert
+
+  - platform: template
+    id: invertor_warning_over_load
+    name: "Over load"
     icon: mdi:alert
 
 interval:
